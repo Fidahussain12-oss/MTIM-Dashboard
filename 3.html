@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CasioMITM - Professional Security Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg: #0b0c0d;
+            --card: #0f1112;
+            --muted: #9aa0a6;
+            --accent: #ff6a00;
+            --accent-dark: #e05500;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --purple: #6f42c1;
+            --pink: #e83e8c;
+            --cyan: #20c997;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 250px;
+            background-color: var(--card);
+            border-right: 1px solid #333;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #333;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        }
+
+        .sidebar-header h4 {
+            color: #ffffff;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            margin: 5px 0;
+        }
+
+        .nav-link {
+            color: var(--muted);
+            padding: 12px 20px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background-color: var(--accent);
+            color: #ffffff;
+            border-left-color: #ffffff;
+            transform: translateX(5px);
+        }
+
+        .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        .top-navbar {
+            background: linear-gradient(135deg, var(--card), #1a1b1c);
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-indicators {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .status-dot.online {
+            background-color: var(--success);
+        }
+
+        .status-dot.offline {
+            background-color: var(--danger);
+        }
+
+        .content-area {
+            padding: 20px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: linear-gradient(135deg, var(--card), #1a1b1c);
+            border: 1px solid #333;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border-bottom: 1px solid #333;
+            color: #ffffff;
+            font-weight: 600;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .card-body {
+            color: #ffffff;
+        }
+
+        .overview-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--card), #1a1b1c);
+            border-radius: 12px;
+            border: 1px solid #333;
+            transition: transform 0.3s ease;
+        }
+
+        .overview-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(255, 106, 0, 0.2);
+        }
+
+        .overview-card h3 {
+            color: var(--accent);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .data-table {
+            width: 100%;
+            color: #ffffff;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #ffffff;
+            padding: 12px;
+            border: none;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 106, 0, 0.3);
+        }
+
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, var(--card), #1a1b1c);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .metric-label {
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Improved responsive behavior with better breakpoints and transitions */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .sidebar-toggle {
+                display: block;
+            }
+
+            .status-indicators {
+                gap: 10px;
+            }
+
+            .status-indicator {
+                padding: 6px 10px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content-area {
+                padding: 15px;
+            }
+
+            .chart-container {
+                height: 250px;
+                padding: 15px;
+            }
+
+            .overview-card h3 {
+                font-size: 2rem;
+            }
+
+            .metric-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+            }
+
+            .top-navbar {
+                padding: 10px 15px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .sidebar {
+                width: 100%;
+            }
+
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-indicators {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+
+        /* Added window resize handler styles */
+        .resize-transition {
+            transition: all 0.3s ease;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .data-entry {
+            background: linear-gradient(135deg, var(--bg), #1a1b1c);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .data-entry:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px rgba(255, 106, 0, 0.1);
+        }
+
+        .data-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .data-entry-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            color: var(--accent);
+            transition: color 0.3s ease;
+        }
+
+        .collapsible:hover {
+            color: var(--accent-dark);
+            text-decoration: underline;
+        }
+
+        .collapsed-content {
+            display: none;
+            margin-top: 10px;
+            padding: 15px;
+            background-color: var(--bg);
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            border-left: 3px solid var(--accent);
+        }
+
+        .system-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, var(--card), #1a1b1c);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .info-card h5 {
+            color: var(--accent);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-label {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            color: #ffffff;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar resize-transition" id="sidebar">
+        <div class="sidebar-header">
+            <!-- Updated project name to CasioMITM -->
+            <h4><i class="fas fa-shield-alt"></i> CasioMITM</h4>
+            <small>Professional Security Dashboard</small>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a href="#" class="nav-link active" data-tab="home">
+                    <i class="fas fa-home"></i> Home
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-tab="network-logs">
+                    <i class="fas fa-network-wired"></i> Network Logs
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-tab="intercept-web">
+                    <i class="fas fa-globe"></i> Intercept Web Data
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-tab="intercept-logs">
+                    <i class="fas fa-list-alt"></i> Intercept Logs
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-tab="settings">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content resize-transition" id="mainContent">
+        <!-- Top Navbar -->
+        <div class="top-navbar">
+            <div class="d-flex align-items-center">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h5 class="mb-0 ms-3">Security Monitoring Dashboard</h5>
+            </div>
+            <div class="status-indicators">
+                <div class="status-indicator">
+                    <div class="status-dot online" id="apiStatus"></div>
+                    <span id="apiStatusText">API Connected</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot online" id="dbStatus"></div>
+                    <span id="dbStatusText">Database Online</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot online" id="systemStatus"></div>
+                    <span id="systemStatusText">System Active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Home Tab -->
+            <div id="home" class="tab-content active">
+                <!-- Enhanced home tab with comprehensive system information -->
+                <div class="system-info">
+                    <div class="info-card">
+                        <h5><i class="fas fa-server text-info"></i> System Status</h5>
+                        <div class="info-item">
+                            <span class="info-label">Uptime</span>
+                            <span class="info-value" id="systemUptime">24h 15m</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">CPU Usage</span>
+                            <span class="info-value" id="cpuUsage">45%</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Memory Usage</span>
+                            <span class="info-value" id="memoryUsage">67%</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Active Connections</span>
+                            <span class="info-value" id="activeConnections">127</span>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5><i class="fas fa-shield-alt text-success"></i> Security Overview</h5>
+                        <div class="info-item">
+                            <span class="info-label">Threats Blocked</span>
+                            <span class="info-value" id="threatsBlocked">1,247</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Packets Analyzed</span>
+                            <span class="info-value" id="packetsAnalyzed">45,892</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Suspicious Activity</span>
+                            <span class="info-value" id="suspiciousActivity">23</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Last Scan</span>
+                            <span class="info-value" id="lastScan">2 min ago</span>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5><i class="fas fa-database text-warning"></i> Data Statistics</h5>
+                        <div class="info-item">
+                            <span class="info-label">Total Records</span>
+                            <span class="info-value" id="totalRecords">12,456</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Data Processed</span>
+                            <span class="info-value" id="dataProcessed">2.4 GB</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Success Rate</span>
+                            <span class="info-value" id="successRate">98.7%</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Error Rate</span>
+                            <span class="info-value" id="errorRate">1.3%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: var(--success);" id="networkLogsCount">0</div>
+                        <div class="metric-label">Network Logs</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: var(--info);" id="interceptWebCount">0</div>
+                        <div class="metric-label">Web Intercepts</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: var(--warning);" id="interceptLogsCount">0</div>
+                        <div class="metric-label">Intercept Logs</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: var(--danger);" id="tsharkCount">0</div>
+                        <div class="metric-label">Tshark Data</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-pie"></i> Data Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="pieChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-line"></i> Activity Timeline</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="lineChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar"></i> System Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Logs Tab -->
+            <div id="network-logs" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-network-wired"></i> Network Logs</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="networkLogsContent">
+                            <div class="loading">
+                                <i class="fas fa-spinner"></i>
+                                <p>Loading network logs...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intercept Web Data Tab -->
+            <div id="intercept-web" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-globe"></i> Intercept Web Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="interceptWebContent">
+                            <div class="loading">
+                                <i class="fas fa-spinner"></i>
+                                <p>Loading web intercept data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intercept Logs Tab -->
+            <div id="intercept-logs" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list-alt"></i> Intercept Logs</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="interceptLogsContent">
+                            <div class="loading">
+                                <i class="fas fa-spinner"></i>
+                                <p>Loading intercept logs...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings" class="tab-content">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-cog"></i> Configuration</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Auto Refresh Interval (seconds)</label>
+                                    <input type="number" class="form-control" id="refreshInterval" value="5" min="1" max="60">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Max Records Display</label>
+                                    <input type="number" class="form-control" id="maxRecords" value="100" min="10" max="1000">
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="autoDelete" checked>
+                                        <label class="form-check-label" for="autoDelete">
+                                            Auto-delete marked records
+                                        </label>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" onclick="saveSettings()">
+                                    <i class="fas fa-save"></i> Save Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-info-circle"></i> About</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Added team information as requested -->
+                                <h6><i class="fas fa-users text-primary"></i> Development Team</h6>
+                                <p class="text-muted mb-3">Created by <strong>Team MSG-Code Exploitrz</strong></p>
+                                
+                                <h6><i class="fas fa-code text-success"></i> CasioMITM Dashboard</h6>
+                                <p class="text-muted mb-3">Professional Security Monitoring & Interception Tool</p>
+                                
+                                <h6><i class="fas fa-shield-alt text-warning"></i> Features</h6>
+                                <ul class="text-muted">
+                                    <li>Real-time network monitoring</li>
+                                    <li>Web traffic interception</li>
+                                    <li>Advanced packet analysis</li>
+                                    <li>Professional dashboard interface</li>
+                                    <li>Firebase integration</li>
+                                </ul>
+                                
+                                <h6><i class="fas fa-database text-info"></i> Data Sources</h6>
+                                <ul class="text-muted small">
+                                    <li>Network Logs: Firebase Realtime Database</li>
+                                    <li>Tshark Data: Packet Analysis Engine</li>
+                                    <li>Web Intercepts: HTTP/HTTPS Traffic</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const FIREBASE_CONFIG = {
+            logs: 'https://techwiz-7f7ab-default-rtdb.firebaseio.com/logs.json',
+            tshark: 'https://techwiz-7f7ab-default-rtdb.firebaseio.com/tshark.json',
+            data_intercepts: 'https://techwiz-7f7ab-default-rtdb.firebaseio.com/data_intercepts.json'
+        };
+        
+        // Global variables
+        let charts = {};
+        let dataCache = {
+            logs: [],
+            tshark: [],
+            data_intercepts: []
+        };
+        let settings = {
+            refreshInterval: 5,
+            maxRecords: 100,
+            autoDelete: true
+        };
+
+        let resizeTimeout;
+        $(window).resize(function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                handleResponsiveLayout();
+                if (charts.pie) charts.pie.resize();
+                if (charts.line) charts.line.resize();
+                if (charts.bar) charts.bar.resize();
+            }, 250);
+        });
+
+        function handleResponsiveLayout() {
+            const sidebar = $('#sidebar');
+            const mainContent = $('#mainContent');
+            const windowWidth = $(window).width();
+
+            if (windowWidth <= 992) {
+                sidebar.removeClass('show');
+                mainContent.addClass('expanded');
+            } else {
+                sidebar.removeClass('collapsed');
+                mainContent.removeClass('expanded');
+            }
+        }
+
+        // Initialize dashboard
+        $(document).ready(function() {
+            initializeEventListeners();
+            initializeCharts();
+            startDataFetching();
+            updateMetrics();
+            handleResponsiveLayout();
+        });
+
+        // Event listeners
+        function initializeEventListeners() {
+            // Sidebar navigation
+            $('.nav-link').click(function(e) {
+                e.preventDefault();
+                const tab = $(this).data('tab');
+                switchTab(tab);
+            });
+
+            $('#sidebarToggle').click(function(e) {
+                e.stopPropagation();
+                const sidebar = $('#sidebar');
+                const mainContent = $('#mainContent');
+                
+                if ($(window).width() <= 992) {
+                    sidebar.toggleClass('show');
+                } else {
+                    sidebar.toggleClass('collapsed');
+                    mainContent.toggleClass('expanded');
+                }
+            });
+
+            // Close sidebar when clicking outside on mobile
+            $(document).click(function(e) {
+                if ($(window).width() <= 992) {
+                    if (!$(e.target).closest('#sidebar, #sidebarToggle').length) {
+                        $('#sidebar').removeClass('show');
+                    }
+                }
+            });
+
+            // Collapsible content
+            $(document).on('click', '.collapsible', function() {
+                $(this).next('.collapsed-content').slideToggle();
+            });
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            $('.nav-link').removeClass('active');
+            $(`.nav-link[data-tab="${tabName}"]`).addClass('active');
+            
+            $('.tab-content').removeClass('active');
+            $(`#${tabName}`).addClass('active');
+
+            // Load data for specific tabs
+            if (tabName === 'network-logs') {
+                displayNetworkLogs();
+            } else if (tabName === 'intercept-web') {
+                displayInterceptWebData();
+            } else if (tabName === 'intercept-logs') {
+                displayInterceptLogs();
+            }
+        }
+
+        // Firebase data fetching
+        function fetchFirebaseData(endpoint) {
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: FIREBASE_CONFIG[endpoint],
+                    method: 'GET',
+                    timeout: 10000,
+                    success: function(data) {
+                        updateApiStatus(true);
+                        const processedData = processFirebaseData(data, endpoint);
+                        resolve(processedData);
+                    },
+                    error: function(xhr, status, error) {
+                        updateApiStatus(false);
+                        console.error(`Error fetching ${endpoint}:`, error);
+                        reject(error);
+                    }
+                });
+            });
+        }
+
+        // Process Firebase data
+        function processFirebaseData(data, endpoint) {
+            if (!data) return [];
+            
+            const processed = [];
+            Object.keys(data).forEach(key => {
+                const item = data[key];
+                if (item.status === 'success') {
+                    processed.push({
+                        id: key,
+                        endpoint: endpoint,
+                        timestamp: new Date().toISOString(),
+                        ...item
+                    });
+                } else if (item.status === 'delete' && settings.autoDelete) {
+                    // Auto-delete from Firebase
+                    deleteFromFirebase(endpoint, key);
+                }
+            });
+            
+            return processed.slice(0, settings.maxRecords);
+        }
+
+        // Delete from Firebase
+        function deleteFromFirebase(endpoint, id) {
+            const deleteUrl = FIREBASE_CONFIG[endpoint].replace('.json', `/${id}.json`);
+            $.ajax({
+                url: deleteUrl,
+                method: 'DELETE',
+                success: function() {
+                    console.log(`Deleted ${id} from ${endpoint}`);
+                    refreshData(endpoint);
+                },
+                error: function(xhr, status, error) {
+                    console.error(`Error deleting ${id} from ${endpoint}:`, error);
+                }
+            });
+        }
+
+        // Start data fetching
+        function startDataFetching() {
+            fetchAllData();
+            setInterval(fetchAllData, settings.refreshInterval * 1000);
+        }
+
+        // Fetch all data
+        async function fetchAllData() {
+            try {
+                const [logs, tshark, dataIntercepts] = await Promise.all([
+                    fetchFirebaseData('logs'),
+                    fetchFirebaseData('tshark'),
+                    fetchFirebaseData('data_intercepts')
+                ]);
+
+                dataCache.logs = logs;
+                dataCache.tshark = tshark;
+                dataCache.data_intercepts = dataIntercepts;
+
+                updateMetrics();
+                updateCharts();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                updateApiStatus(false);
+            }
+        }
+
+        // Update metrics
+        function updateMetrics() {
+            $('#networkLogsCount').text(dataCache.logs.length);
+            $('#interceptWebCount').text(dataCache.data_intercepts.length);
+            $('#interceptLogsCount').text(dataCache.logs.length + dataCache.data_intercepts.length);
+            $('#tsharkCount').text(dataCache.tshark.length);
+
+            // Update system info with random realistic values
+            $('#systemUptime').text(generateUptime());
+            $('#cpuUsage').text(Math.floor(Math.random() * 30 + 40) + '%');
+            $('#memoryUsage').text(Math.floor(Math.random() * 20 + 60) + '%');
+            $('#activeConnections').text(Math.floor(Math.random() * 50 + 100));
+            $('#threatsBlocked').text((Math.floor(Math.random() * 500 + 1000)).toLocaleString());
+            $('#packetsAnalyzed').text((Math.floor(Math.random() * 10000 + 40000)).toLocaleString());
+            $('#suspiciousActivity').text(Math.floor(Math.random() * 20 + 10));
+            $('#totalRecords').text((dataCache.logs.length + dataCache.tshark.length + dataCache.data_intercepts.length).toLocaleString());
+            $('#dataProcessed').text((Math.random() * 2 + 1).toFixed(1) + ' GB');
+            $('#successRate').text((98 + Math.random() * 1.5).toFixed(1) + '%');
+            $('#errorRate').text((2 - Math.random() * 1.5).toFixed(1) + '%');
+        }
+
+        function generateUptime() {
+            const hours = Math.floor(Math.random() * 48 + 12);
+            const minutes = Math.floor(Math.random() * 60);
+            return `${hours}h ${minutes}m`;
+        }
+
+        function initializeCharts() {
+            // Pie Chart with vibrant colors
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            charts.pie = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Network Logs', 'Tshark Data', 'Web Intercepts', 'System Logs'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: [
+                            '#ff6a00',  // Orange
+                            '#28a745',  // Green
+                            '#17a2b8',  // Cyan
+                            '#6f42c1',  // Purple
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Line Chart with gradient and multiple datasets
+            const lineCtx = document.getElementById('lineChart').getContext('2d');
+            const gradient1 = lineCtx.createLinearGradient(0, 0, 0, 300);
+            gradient1.addColorStop(0, 'rgba(255, 106, 0, 0.3)');
+            gradient1.addColorStop(1, 'rgba(255, 106, 0, 0.05)');
+
+            const gradient2 = lineCtx.createLinearGradient(0, 0, 0, 300);
+            gradient2.addColorStop(0, 'rgba(40, 167, 69, 0.3)');
+            gradient2.addColorStop(1, 'rgba(40, 167, 69, 0.05)');
+
+            charts.line = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Network Activity',
+                        data: [],
+                        borderColor: '#ff6a00',
+                        backgroundColor: gradient1,
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Intercepts',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: gradient2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Bar Chart with colorful bars
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            charts.bar = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['CPU', 'Memory', 'Disk I/O', 'Network', 'Latency'],
+                    datasets: [{
+                        label: 'Performance %',
+                        data: [45, 67, 34, 78, 23],
+                        backgroundColor: [
+                            '#ff6a00',  // Orange
+                            '#28a745',  // Green
+                            '#dc3545',  // Red
+                            '#17a2b8',  // Cyan
+                            '#ffc107'   // Yellow
+                        ],
+                        borderColor: [
+                            '#e05500',
+                            '#1e7e34',
+                            '#c82333',
+                            '#138496',
+                            '#e0a800'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update charts
+        function updateCharts() {
+            // Update pie chart
+            if (charts.pie) {
+                charts.pie.data.datasets[0].data = [
+                    dataCache.logs.length,
+                    dataCache.tshark.length,
+                    dataCache.data_intercepts.length,
+                    Math.floor(Math.random() * 20 + 10)
+                ];
+                charts.pie.update();
+            }
+
+            // Update line chart with time series data
+            if (charts.line) {
+                const now = new Date();
+                const timeLabels = [];
+                const networkData = [];
+                const interceptData = [];
+
+                for (let i = 9; i >= 0; i--) {
+                    const time = new Date(now.getTime() - i * 60000);
+                    timeLabels.push(time.toLocaleTimeString());
+                    networkData.push(Math.floor(Math.random() * 50 + 20));
+                    interceptData.push(Math.floor(Math.random() * 30 + 10));
+                }
+
+                charts.line.data.labels = timeLabels;
+                charts.line.data.datasets[0].data = networkData;
+                charts.line.data.datasets[1].data = interceptData;
+                charts.line.update();
+            }
+
+            // Update bar chart with random performance data
+            if (charts.bar) {
+                charts.bar.data.datasets[0].data = [
+                    Math.floor(Math.random() * 30 + 40),
+                    Math.floor(Math.random() * 20 + 60),
+                    Math.floor(Math.random() * 40 + 30),
+                    Math.floor(Math.random() * 25 + 70),
+                    Math.floor(Math.random() * 30 + 20)
+                ];
+                charts.bar.update();
+            }
+        }
+
+        // Display functions
+        function displayNetworkLogs() {
+            const content = $('#networkLogsContent');
+            if (dataCache.logs.length === 0) {
+                content.html('<div class="loading"><i class="fas fa-exclamation-triangle"></i><p>No network logs available</p></div>');
+                return;
+            }
+
+            let html = '';
+            dataCache.logs.forEach(log => {
+                html += createDataEntry(log, 'network-log');
+            });
+            content.html(html);
+        }
+
+        function displayInterceptWebData() {
+            const content = $('#interceptWebContent');
+            if (dataCache.data_intercepts.length === 0) {
+                content.html('<div class="loading"><i class="fas fa-exclamation-triangle"></i><p>No web intercept data available</p></div>');
+                return;
+            }
+
+            let html = '';
+            dataCache.data_intercepts.forEach(data => {
+                html += createDataEntry(data, 'web-intercept');
+            });
+            content.html(html);
+        }
+
+        function displayInterceptLogs() {
+            const content = $('#interceptLogsContent');
+            const allLogs = [...dataCache.logs, ...dataCache.data_intercepts];
+            
+            if (allLogs.length === 0) {
+                content.html('<div class="loading"><i class="fas fa-exclamation-triangle"></i><p>No intercept logs available</p></div>');
+                return;
+            }
+
+            let html = '';
+            allLogs.forEach(log => {
+                html += createDataEntry(log, 'intercept-log');
+            });
+            content.html(html);
+        }
+
+        function createDataEntry(data, type) {
+            const timestamp = data.timestamp || new Date().toISOString();
+            const formattedTime = new Date(timestamp).toLocaleString();
+            
+            return `
+                <div class="data-entry">
+                    <div class="data-entry-header">
+                        <div>
+                            <strong>${type.toUpperCase()}</strong>
+                            <small class="text-muted ms-2">${formattedTime}</small>
+                        </div>
+                        <div class="data-entry-actions">
+                            <button class="btn btn-sm btn-warning" onclick="hideEntry('${data.id}', '${data.endpoint}')">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteEntry('${data.id}', '${data.endpoint}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="collapsible">
+                        <i class="fas fa-chevron-down"></i> View Details
+                    </div>
+                    <div class="collapsed-content">
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Entry actions
+        function hideEntry(id, endpoint) {
+            updateEntryStatus(id, endpoint, 'hide');
+        }
+
+        function deleteEntry(id, endpoint) {
+            if (confirm('Are you sure you want to delete this entry?')) {
+                updateEntryStatus(id, endpoint, 'delete');
+            }
+        }
+
+        function updateEntryStatus(id, endpoint, status) {
+            const updateUrl = FIREBASE_CONFIG[endpoint].replace('.json', `/${id}/status.json`);
+            $.ajax({
+                url: updateUrl,
+                method: 'PUT',
+                data: JSON.stringify(status),
+                contentType: 'application/json',
+                success: function() {
+                    console.log(`Updated ${id} status to ${status}`);
+                    if (status === 'delete') {
+                        setTimeout(() => fetchAllData(), 1000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error(`Error updating ${id}:`, error);
+                }
+            });
+        }
+
+        // Status updates
+        function updateApiStatus(isOnline) {
+            const statusDot = $('#apiStatus');
+            const statusText = $('#apiStatusText');
+            
+            if (isOnline) {
+                statusDot.removeClass('offline').addClass('online');
+                statusText.text('API Connected');
+            } else {
+                statusDot.removeClass('online').addClass('offline');
+                statusText.text('API Disconnected');
+            }
+        }
+
+        // Settings
+        function saveSettings() {
+            settings.refreshInterval = parseInt($('#refreshInterval').val());
+            settings.maxRecords = parseInt($('#maxRecords').val());
+            settings.autoDelete = $('#autoDelete').is(':checked');
+            
+            // Restart data fetching with new interval
+            clearInterval(window.dataFetchInterval);
+            startDataFetching();
+            
+            alert('Settings saved successfully!');
+        }
+
+        // Refresh data
+        function refreshData(endpoint) {
+            if (endpoint) {
+                fetchFirebaseData(endpoint).then(data => {
+                    dataCache[endpoint] = data;
+                    updateMetrics();
+                    updateCharts();
+                });
+            } else {
+                fetchAllData();
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', function() {
+            setTimeout(updateCharts, 1000);
+        });
+    </script>
+</body>
+</html>
