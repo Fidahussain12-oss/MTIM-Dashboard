@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CasioMITM - Professional Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        /* Updated color scheme to use custom CSS variables */
+        :root {
+            --bg: #0b0c0d;
+            --card: #0f1112;
+            --muted: #9aa0a6;
+            --accent: #ff6a00;
+            --accent-dark: #e05500;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: var(--card);
+            border-right: 1px solid rgba(255, 106, 0, 0.2);
+            position: fixed;
+            height: 100vh;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255, 106, 0, 0.2);
+            text-align: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+        }
+
+        .brand-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .brand-subtitle {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 5px;
+        }
+
+        .nav-menu {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 25px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 106, 0, 0.1);
+            border-left-color: var(--accent);
+        }
+
+        .nav-item.active {
+            background: rgba(255, 106, 0, 0.15);
+            border-left-color: var(--accent);
+        }
+
+        .nav-item i {
+            font-size: 16px;
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .nav-item span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            background: var(--bg);
+        }
+
+        .header {
+            background: var(--card);
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 106, 0, 0.2);
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .header-subtitle {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .content-area {
+            padding: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 106, 0, 0.2);
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        /* Data Table */
+        .data-section {
+            background: var(--card);
+            border-radius: 8px;
+            padding: 25px;
+            border: 1px solid rgba(255, 106, 0, 0.2);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 106, 0, 0.2);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Removed refresh button styles and functionality */
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th {
+            background: var(--accent);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 13px;
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 106, 0, 0.05);
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status-hidden {
+            background: #757575;
+            color: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .action-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: opacity 0.2s ease;
+        }
+
+        .hide-btn {
+            background: #FFC107;
+            color: #000;
+        }
+
+        .delete-btn {
+            background: #F44336;
+            color: white;
+        }
+
+        .action-btn:hover {
+            opacity: 0.8;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+
+        .loading i {
+            font-size: 24px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+
+        .empty-state i {
+            font-size: 32px;
+            color: var(--accent);
+            margin-bottom: 15px;
+        }
+
+        /* Added live indicator */
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #4CAF50;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 250px;
+                transform: translateX(-100%);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="https://mitm.ac.in/assets/logos/mitm_logo.png" alt="MITM Logo" class="logo">
+                </div>
+                <div class="brand-name">CasioMITM</div>
+                <div class="brand-subtitle">Professional Dashboard</div>
+            </div>
+            <nav class="nav-menu">
+                <div class="nav-item active" data-tab="data-intercept">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Data Intercept</span>
+                </div>
+                <div class="nav-item" data-tab="data-logs">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Data Logs</span>
+                </div>
+                <div class="nav-item" data-tab="network-logs">
+                    <i class="fas fa-network-wired"></i>
+                    <span>Network Logs</span>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <div class="header-title">Security Monitoring Dashboard</div>
+                <div class="header-subtitle">Real-time network and data interception monitoring</div>
+            </div>
+
+            <div class="content-area">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="stat-value" id="intercept-count">0</div>
+                        <div class="stat-label">Data Intercepts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="stat-value" id="logs-count">0</div>
+                        <div class="stat-label">System Logs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-network-wired"></i>
+                        </div>
+                        <div class="stat-value" id="network-count">0</div>
+                        <div class="stat-label">Network Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="stat-value" id="total-collections">0</div>
+                        <div class="stat-label">Total Collections</div>
+                    </div>
+                </div>
+
+                <!-- Data Sections -->
+                <div id="data-intercept-section" class="data-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fas fa-shield-alt"></i> Data Intercept Monitor
+                        </div>
+                        <!-- Removed refresh button, added live indicator -->
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            <span>Live</span>
+                        </div>
+                    </div>
+                    <div id="data-intercept-content">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <p>Loading data intercepts...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="data-logs-section" class="data-section" style="display: none;">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fas fa-file-alt"></i> System Logs
+                        </div>
+                        <!-- Removed refresh button, added live indicator -->
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            <span>Live</span>
+                        </div>
+                    </div>
+                    <div id="data-logs-content">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <p>Loading system logs...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="network-logs-section" class="data-section" style="display: none;">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fas fa-network-wired"></i> Network Traffic Analysis
+                        </div>
+                        <!-- Removed refresh button, added live indicator -->
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            <span>Live</span>
+                        </div>
+                    </div>
+                    <div id="network-logs-content">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <p>Loading network logs...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            databaseURL: "https://techwiz-7f7ab-default-rtdb.firebaseio.com/"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let allCollections = {};
+        let collectionStats = {
+            intercepts: 0,
+            logs: 0,
+            network: 0,
+            total: 0
+        };
+
+        // Navigation handling
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                this.classList.add('active');
+                
+                document.querySelectorAll('.data-section').forEach(section => section.style.display = 'none');
+                
+                const tabName = this.getAttribute('data-tab');
+                document.getElementById(tabName + '-section').style.display = 'block';
+            });
+        });
+
+        function setupFirebaseListeners() {
+            // Listen to each collection separately for better performance
+            const collections = ['data_intercepts', 'logs', 'tshark'];
+            
+            collections.forEach(collectionName => {
+                database.ref(`/${collectionName}`).on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    allCollections[collectionName] = data;
+                    
+                    // Update stats and tables
+                    updateCollectionStats();
+                    updateAllTables();
+                }, (error) => {
+                    console.error(`Error listening to ${collectionName}:`, error);
+                });
+            });
+        }
+
+        function countSuccessItems(collection) {
+            if (!collection) return 0;
+            return Object.values(collection).filter(item => {
+                return item && (item.status === 'success' || item.status?.trim() === 'success');
+            }).length;
+        }
+
+        function updateCollectionStats() {
+            collectionStats.intercepts = countSuccessItems(allCollections.data_intercepts || {});
+            collectionStats.logs = countSuccessItems(allCollections.logs || {});
+            collectionStats.network = countSuccessItems(allCollections.tshark || {});
+            collectionStats.total = Object.keys(allCollections).length;
+            updateStats();
+        }
+
+        function updateAllTables() {
+            updateInterceptTable();
+            updateLogsTable();
+            updateNetworkTable();
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('intercept-count').textContent = collectionStats.intercepts;
+            document.getElementById('logs-count').textContent = collectionStats.logs;
+            document.getElementById('network-count').textContent = collectionStats.network;
+            document.getElementById('total-collections').textContent = collectionStats.total;
+        }
+
+        function updateInterceptTable() {
+            const content = document.getElementById('data-intercept-content');
+            const interceptData = allCollections.data_intercepts || {};
+            
+            // Filter for success status (including trimmed versions)
+            const visibleData = Object.entries(interceptData).filter(([key, item]) => {
+                if (!item) return false;
+                const status = item.status?.trim?.() || item.status;
+                return status === 'success';
+            });
+
+            if (visibleData.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-shield-alt"></i>
+                        <h3>No Data Intercepts</h3>
+                        <p>No active data interceptions found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Target</th>
+                            <th>Port</th>
+                            <th>Interception</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            visibleData.sort(([,a], [,b]) => {
+                const timeA = new Date(a.timestamp || 0);
+                const timeB = new Date(b.timestamp || 0);
+                return timeB - timeA;
+            });
+
+            visibleData.forEach(([key, item]) => {
+                const status = item.status?.trim?.() || item.status;
+                tableHTML += `
+                    <tr>
+                        <td>${item.timestamp || 'N/A'}</td>
+                        <td>${item.target || 'N/A'}</td>
+                        <td>${item.port || 'N/A'}</td>
+                        <td>${item.data_interception || 'N/A'}</td>
+                        <td><span class="status-badge status-${status}">${status}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn hide-btn" onclick="hideItem('data_intercepts', '${key}')">
+                                    <i class="fas fa-eye-slash"></i> Hide
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteItem('data_intercepts', '${key}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            content.innerHTML = tableHTML;
+        }
+
+        function updateLogsTable() {
+            const content = document.getElementById('data-logs-content');
+            const logsData = allCollections.logs || {};
+            
+            const visibleData = Object.entries(logsData).filter(([key, item]) => {
+                if (!item) return false;
+                const status = item.status?.trim?.() || item.status;
+                return status === 'success';
+            });
+
+            if (visibleData.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-file-alt"></i>
+                        <h3>No System Logs</h3>
+                        <p>No system logs available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Host</th>
+                            <th>Message</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            // Sort by timestamp
+            visibleData.sort(([,a], [,b]) => {
+                const timeA = new Date(a.timestamp || 0);
+                const timeB = new Date(b.timestamp || 0);
+                return timeB - timeA;
+            });
+
+            visibleData.forEach(([key, item]) => {
+                const status = item.status?.trim?.() || item.status;
+                tableHTML += `
+                    <tr>
+                        <td>${item.timestamp || 'N/A'}</td>
+                        <td>${item.host || 'N/A'}</td>
+                        <td>${item.message || 'N/A'}</td>
+                        <td><span class="status-badge status-${status}">${status}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn hide-btn" onclick="hideItem('logs', '${key}')">
+                                    <i class="fas fa-eye-slash"></i> Hide
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteItem('logs', '${key}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            content.innerHTML = tableHTML;
+        }
+
+        function updateNetworkTable() {
+            const content = document.getElementById('network-logs-content');
+            const networkData = allCollections.tshark || {};
+            
+            const visibleData = Object.entries(networkData).filter(([key, item]) => {
+                if (!item) return false;
+                const status = item.status?.trim?.() || item.status;
+                return status === 'success';
+            });
+
+            if (visibleData.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-network-wired"></i>
+                        <h3>No Network Logs</h3>
+                        <p>No network traffic data available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>ID</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Protocol</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            visibleData.sort(([,a], [,b]) => {
+                const timeA = new Date(a.timestamp || 0);
+                const timeB = new Date(b.timestamp || 0);
+                return timeB - timeA;
+            });
+
+            visibleData.forEach(([key, item]) => {
+                const status = item.status?.trim?.() || item.status;
+                tableHTML += `
+                    <tr>
+                        <td>${item.timestamp || 'N/A'}</td>
+                        <td>${item.id || 'N/A'}</td>
+                        <td>${item.src || 'N/A'}</td>
+                        <td>${item.dst || 'N/A'}</td>
+                        <td>${item.protocol || 'N/A'}</td>
+                        <td><span class="status-badge status-${status}">${status}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn hide-btn" onclick="hideItem('tshark', '${key}')">
+                                    <i class="fas fa-eye-slash"></i> Hide
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteItem('tshark', '${key}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            content.innerHTML = tableHTML;
+        }
+
+        function hideItem(collection, key) {
+            if (confirm('Are you sure you want to hide this item?')) {
+                database.ref(`${collection}/${key}/status`).set('hidden')
+                    .then(() => {
+                        console.log(`Item ${key} hidden successfully`);
+                    })
+                    .catch((error) => {
+                        console.error('Error hiding item:', error);
+                        alert('Error hiding item. Please try again.');
+                    });
+            }
+        }
+
+        // Delete item permanently
+        function deleteItem(collection, key) {
+            if (confirm('Are you sure you want to permanently delete this item? This action cannot be undone.')) {
+                database.ref(`${collection}/${key}`).remove()
+                    .then(() => {
+                        console.log(`Item ${key} deleted successfully`);
+                    })
+                    .catch((error) => {
+                        console.error('Error deleting item:', error);
+                        alert('Error deleting item. Please try again.');
+                    });
+            }
+        }
+
+        function cleanup() {
+            database.ref('/').off();
+            database.ref('/data_intercepts').off();
+            database.ref('/logs').off();
+            database.ref('/tshark').off();
+        }
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFirebaseListeners();
+        });
+
+        window.addEventListener('beforeunload', cleanup);
+    </script>
+</body>
+</html>
