@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechWiz Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0c0d;
+            --card: #0f1112;
+            --muted: #9aa0a6;
+            --accent: #ff6a00;
+            --accent-dark: #e05500;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --border: #2a2a2a;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Top Navbar */
+        .top-navbar {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            height: 60px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-connected {
+            background: rgba(40, 167, 69, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-disconnected {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            height: calc(100vh - 60px);
+            width: 280px;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            transition: transform 0.3s ease;
+            z-index: 1020;
+            overflow-y: auto;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            margin: 0.25rem 1rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 106, 0, 0.1);
+            color: var(--accent);
+        }
+
+        .nav-link.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            margin-top: 60px;
+            padding: 2rem;
+            min-height: calc(100vh - 60px);
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        /* Cards */
+        .dashboard-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 106, 0, 0.15);
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 2rem 1rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Tables */
+        .table-dark {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-dark th {
+            background: var(--accent);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 1rem;
+        }
+
+        .table-dark td {
+            border-color: var(--border);
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        /* Buttons */
+        .btn-accent {
+            background: var(--accent);
+            border: 1px solid var(--accent);
+            color: white;
+            font-weight: 500;
+        }
+
+        .btn-accent:hover {
+            background: var(--accent-dark);
+            border-color: var(--accent-dark);
+            color: white;
+        }
+
+        .btn-outline-accent {
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            background: transparent;
+        }
+
+        .btn-outline-accent:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            padding: 0.375rem 0.75rem;
+            margin: 0 0.125rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .btn-hide {
+            background: var(--warning);
+            color: #212529;
+        }
+
+        .btn-hide:hover {
+            background: #e0a800;
+        }
+
+        /* Charts Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1rem 0;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .top-navbar {
+                padding: 0.5rem 1rem;
+            }
+
+            .stat-number {
+                font-size: 2rem;
+            }
+
+            .dashboard-card {
+                padding: 1rem;
+            }
+
+            .table-responsive {
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Toggle Button */
+        .sidebar-toggle {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--accent-dark);
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 106, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Performance Metrics */
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-good { color: var(--success); }
+        .metric-warning { color: var(--warning); }
+        .metric-danger { color: var(--danger); }
+    </style>
+</head>
+<body>
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <button class="sidebar-toggle d-md-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h4 class="mb-0" style="color: var(--accent);">
+                    <i class="fas fa-chart-line me-2"></i>TechWiz Dashboard
+                </h4>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="status-indicator" id="apiStatus">
+                    <div class="loading-spinner"></div>
+                    <span>Connecting...</span>
+                </div>
+                <div class="status-indicator" id="dataStatus">
+                    <div class="loading-spinner"></div>
+                    <span>Loading...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h5 style="color: var(--accent);">
+                <i class="fas fa-tachometer-alt me-2"></i>Navigation
+            </h5>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a href="#" class="nav-link active" onclick="showTab('home')">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" onclick="showTab('network-logs')">
+                    <i class="fas fa-network-wired"></i>
+                    <span>Network Logs & Intercept</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" onclick="showTab('web-data')">
+                    <i class="fas fa-globe"></i>
+                    <span>Web Data Intercept</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" onclick="showTab('logs')">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Logs</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" onclick="showTab('settings')">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Home Tab -->
+        <div id="home" class="tab-content active">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 style="color: var(--accent);">
+                        <i class="fas fa-chart-bar me-2"></i>Dashboard Overview
+                    </h2>
+                    <p class="text-muted">Real-time monitoring and analytics</p>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="dashboard-card stat-card">
+                        <div class="stat-number" id="totalRequests">0</div>
+                        <div class="stat-label">Total Requests</div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="dashboard-card stat-card">
+                        <div class="stat-number" id="activeConnections">0</div>
+                        <div class="stat-label">Active Connections</div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="dashboard-card stat-card">
+                        <div class="stat-number" id="dataIntercepted">0</div>
+                        <div class="stat-label">Data Intercepted</div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="dashboard-card stat-card">
+                        <div class="stat-number" id="errorRate">0%</div>
+                        <div class="stat-label">Error Rate</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <div class="col-lg-6 mb-3">
+                    <div class="dashboard-card">
+                        <h5 class="mb-3" style="color: var(--accent);">
+                            <i class="fas fa-chart-line me-2"></i>Request Trends
+                        </h5>
+                        <div class="chart-container">
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mb-3">
+                    <div class="dashboard-card">
+                        <h5 class="mb-3" style="color: var(--accent);">
+                            <i class="fas fa-chart-pie me-2"></i>Request Types
+                        </h5>
+                        <div class="chart-container">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-6 mb-3">
+                    <div class="dashboard-card">
+                        <h5 class="mb-3" style="color: var(--accent);">
+                            <i class="fas fa-chart-bar me-2"></i>Response Times
+                        </h5>
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mb-3">
+                    <div class="dashboard-card">
+                        <h5 class="mb-3" style="color: var(--accent);">
+                            <i class="fas fa-chart-area me-2"></i>Data Distribution
+                        </h5>
+                        <div class="chart-container">
+                            <canvas id="scatterChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Logs & Intercept Tab -->
+        <div id="network-logs" class="tab-content">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 style="color: var(--accent);">
+                        <i class="fas fa-network-wired me-2"></i>Network Logs & Intercept
+                    </h2>
+                    <p class="text-muted">Monitor and intercept network traffic</p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Network Requests</h5>
+                    <button class="btn btn-accent btn-sm" onclick="refreshNetworkLogs()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Method</th>
+                                <th>URL</th>
+                                <th>Status</th>
+                                <th>Size</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="networkLogsTable">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Web Data Intercept Tab -->
+        <div id="web-data" class="tab-content">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 style="color: var(--accent);">
+                        <i class="fas fa-globe me-2"></i>Web Data Intercept
+                    </h2>
+                    <p class="text-muted">Intercepted web data and requests</p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Intercepted Data</h5>
+                    <button class="btn btn-accent btn-sm" onclick="refreshWebData()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Host</th>
+                                <th>Method</th>
+                                <th>Headers</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="webDataTable">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs" class="tab-content">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 style="color: var(--accent);">
+                        <i class="fas fa-file-alt me-2"></i>System Logs
+                    </h2>
+                    <p class="text-muted">Application and system logs</p>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Recent Logs</h5>
+                    <button class="btn btn-accent btn-sm" onclick="refreshLogs()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Level</th>
+                                <th>Message</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTable">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 style="color: var(--accent);">
+                        <i class="fas fa-cog me-2"></i>System Settings
+                    </h2>
+                    <p class="text-muted">System performance and connectivity monitoring</p>
+                </div>
+            </div>
+
+            <!-- API Connectivity -->
+            <div class="dashboard-card mb-4">
+                <h5 class="mb-3" style="color: var(--accent);">
+                    <i class="fas fa-plug me-2"></i>API Connectivity
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Firebase URL</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" 
+                                   id="firebaseUrl" value="https://techwiz-7f7ab-default-rtdb.firebaseio.com/" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Connection Status</label>
+                            <div class="form-control bg-dark border-secondary" id="connectionStatus">
+                                <span class="status-indicator status-connected">
+                                    <i class="fas fa-check-circle"></i>Connected
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-accent" onclick="testConnection()">
+                    <i class="fas fa-wifi me-1"></i>Test Connection
+                </button>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="dashboard-card">
+                <h5 class="mb-3" style="color: var(--accent);">
+                    <i class="fas fa-tachometer-alt me-2"></i>Performance Metrics
+                </h5>
+                <div class="performance-grid" id="performanceMetrics">
+                    <!-- Dynamic performance metrics -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+
+    <script>
+        // Global variables
+        const FIREBASE_URL = 'https://techwiz-7f7ab-default-rtdb.firebaseio.com/';
+        let charts = {};
+        let dataCache = {
+            data_intercepts: {},
+            logs: {},
+            network_logs: {}
+        };
+        let refreshInterval;
+
+        // Initialize dashboard
+        $(document).ready(function() {
+            initializeDashboard();
+            startDataRefresh();
+            initializeCharts();
+            loadPerformanceMetrics();
+        });
+
+        // Dashboard initialization
+        function initializeDashboard() {
+            updateApiStatus('connected');
+            updateDataStatus('loaded');
+            loadAllData();
+        }
+
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tabs
+            $('.tab-content').removeClass('active');
+            $('.nav-link').removeClass('active');
+            
+            // Show selected tab
+            $(`#${tabName}`).addClass('active');
+            $(`.nav-link[onclick="showTab('${tabName}')"]`).addClass('active');
+            
+            // Load tab-specific data
+            switch(tabName) {
+                case 'home':
+                    updateDashboardStats();
+                    updateCharts();
+                    break;
+                case 'network-logs':
+                    loadNetworkLogs();
+                    break;
+                case 'web-data':
+                    loadWebDataIntercepts();
+                    break;
+                case 'logs':
+                    loadSystemLogs();
+                    break;
+                case 'settings':
+                    loadPerformanceMetrics();
+                    break;
+            }
+        }
+
+        // Sidebar toggle
+        function toggleSidebar() {
+            const sidebar = $('#sidebar');
+            const mainContent = $('#mainContent');
+            
+            if (window.innerWidth <= 768) {
+                sidebar.toggleClass('show');
+            } else {
+                sidebar.toggleClass('collapsed');
+                mainContent.toggleClass('expanded');
+            }
+        }
+
+        // Status updates
+        function updateApiStatus(status) {
+            const statusEl = $('#apiStatus');
+            if (status === 'connected') {
+                statusEl.html('<i class="fas fa-check-circle"></i><span>API Connected</span>');
+                statusEl.removeClass('status-disconnected').addClass('status-connected');
+            } else {
+                statusEl.html('<i class="fas fa-times-circle"></i><span>API Disconnected</span>');
+                statusEl.removeClass('status-connected').addClass('status-disconnected');
+            }
+        }
+
+        function updateDataStatus(status) {
+            const statusEl = $('#dataStatus');
+            if (status === 'loaded') {
+                statusEl.html('<i class="fas fa-database"></i><span>Data Loaded</span>');
+                statusEl.removeClass('status-disconnected').addClass('status-connected');
+            } else {
+                statusEl.html('<i class="fas fa-exclamation-triangle"></i><span>Data Loading</span>');
+                statusEl.removeClass('status-connected').addClass('status-disconnected');
+            }
+        }
+
+        // Data loading functions
+        function loadAllData() {
+            Promise.all([
+                loadDataIntercepts(),
+                loadLogs(),
+                loadNetworkLogs()
+            ]).then(() => {
+                updateDashboardStats();
+                updateCharts();
+            }).catch(error => {
+                console.error('Error loading data:', error);
+                updateApiStatus('disconnected');
+            });
+        }
+
+        function loadDataIntercepts() {
+            return $.ajax({
+                url: `${FIREBASE_URL}data_intercepts.json`,
+                method: 'GET',
+                dataType: 'json'
+            }).done(function(data) {
+                if (data) {
+                    dataCache.data_intercepts = data;
+                    updateWebDataTable();
+                }
+            });
+        }
+
+        function loadLogs() {
+            return $.ajax({
+                url: `${FIREBASE_URL}logs.json`,
+                method: 'GET',
+                dataType: 'json'
+            }).done(function(data) {
+                if (data) {
+                    dataCache.logs = data;
+                    updateLogsTable();
+                }
+            });
+        }
+
+        function loadNetworkLogs() {
+            // Simulate network logs data
+            const networkData = generateNetworkLogsData();
+            dataCache.network_logs = networkData;
+            updateNetworkLogsTable();
+        }
+
+        // Table update functions
+        function updateWebDataTable() {
+            const tbody = $('#webDataTable');
+            tbody.empty();
+            
+            Object.keys(dataCache.data_intercepts).forEach(key => {
+                const item = dataCache.data_intercepts[key];
+                if (item.status !== 'hidden') {
+                    const row = createWebDataRow(key, item);
+                    tbody.append(row);
+                }
+            });
+        }
+
+        function createWebDataRow(id, data) {
+            const host = data.headers?.Host || 'Unknown';
+            const method = data.method || 'GET';
+            const headersCount = data.headers ? Object.keys(data.headers).length : 0;
+            const status = data.status || 'success';
+            
+            return `
+                <tr data-id="${id}">
+                    <td>${id.substring(0, 8)}...</td>
+                    <td>${host}</td>
+                    <td><span class="badge bg-info">${method}</span></td>
+                    <td>${headersCount} headers</td>
+                    <td><span class="badge ${status === 'success' ? 'bg-success' : 'bg-warning'}">${status}</span></td>
+                    <td>
+                        <button class="action-btn btn-hide" onclick="hideItem('data_intercepts', '${id}')">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                        <button class="action-btn btn-delete" onclick="deleteItem('data_intercepts', '${id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function updateLogsTable() {
+            const tbody = $('#logsTable');
+            tbody.empty();
+            
+            Object.keys(dataCache.logs).forEach(key => {
+                const item = dataCache.logs[key];
+                if (item.status !== 'hidden') {
+                    const row = createLogRow(key, item);
+                    tbody.append(row);
+                }
+            });
+        }
+
+        function createLogRow(id, data) {
+            const timestamp = new Date().toLocaleString();
+            const level = data.level || 'INFO';
+            const message = data.message || 'Log entry';
+            const source = data.source || 'System';
+            const status = data.status || 'success';
+            
+            return `
+                <tr data-id="${id}">
+                    <td>${timestamp}</td>
+                    <td><span class="badge ${level === 'ERROR' ? 'bg-danger' : level === 'WARN' ? 'bg-warning' : 'bg-info'}">${level}</span></td>
+                    <td>${message}</td>
+                    <td>${source}</td>
+                    <td><span class="badge ${status === 'success' ? 'bg-success' : 'bg-warning'}">${status}</span></td>
+                    <td>
+                        <button class="action-btn btn-hide" onclick="hideItem('logs', '${id}')">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                        <button class="action-btn btn-delete" onclick="deleteItem('logs', '${id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function updateNetworkLogsTable() {
+            const tbody = $('#networkLogsTable');
+            tbody.empty();
+            
+            Object.keys(dataCache.network_logs).forEach(key => {
+                const item = dataCache.network_logs[key];
+                if (item.status !== 'hidden') {
+                    const row = createNetworkLogRow(key, item);
+                    tbody.append(row);
+                }
+            });
+        }
+
+        function createNetworkLogRow(id, data) {
+            return `
+                <tr data-id="${id}">
+                    <td>${data.timestamp}</td>
+                    <td><span class="badge bg-primary">${data.method}</span></td>
+                    <td>${data.url}</td>
+                    <td><span class="badge ${data.statusCode < 400 ? 'bg-success' : 'bg-danger'}">${data.statusCode}</span></td>
+                    <td>${data.size}</td>
+                    <td>
+                        <button class="action-btn btn-hide" onclick="hideItem('network_logs', '${id}')">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                        <button class="action-btn btn-delete" onclick="deleteItem('network_logs', '${id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // CRUD operations
+        function hideItem(collection, id) {
+            if (collection === 'data_intercepts' || collection === 'logs') {
+                // Update in Firebase
+                $.ajax({
+                    url: `${FIREBASE_URL}${collection}/${id}.json`,
+                    method: 'PATCH',
+                    data: JSON.stringify({ status: 'hidden' }),
+                    contentType: 'application/json'
+                }).done(function() {
+                    // Update local cache
+                    if (dataCache[collection][id]) {
+                        dataCache[collection][id].status = 'hidden';
+                    }
+                    // Remove from table
+                    $(`tr[data-id="${id}"]`).fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                    updateDashboardStats();
+                });
+            } else {
+                // For network_logs (local data)
+                if (dataCache[collection][id]) {
+                    dataCache[collection][id].status = 'hidden';
+                }
+                $(`tr[data-id="${id}"]`).fadeOut(300, function() {
+                    $(this).remove();
+                });
+                updateDashboardStats();
+            }
+        }
+
+        function deleteItem(collection, id) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                if (collection === 'data_intercepts' || collection === 'logs') {
+                    // Delete from Firebase
+                    $.ajax({
+                        url: `${FIREBASE_URL}${collection}/${id}.json`,
+                        method: 'DELETE'
+                    }).done(function() {
+                        // Remove from local cache
+                        delete dataCache[collection][id];
+                        // Remove from table
+                        $(`tr[data-id="${id}"]`).fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                        updateDashboardStats();
+                    });
+                } else {
+                    // For network_logs (local data)
+                    delete dataCache[collection][id];
+                    $(`tr[data-id="${id}"]`).fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                    updateDashboardStats();
+                }
+            }
+        }
+
+        // Dashboard statistics
+        function updateDashboardStats() {
+            const totalRequests = Object.keys(dataCache.data_intercepts).length + 
+                                Object.keys(dataCache.network_logs).length;
+            const activeConnections = Math.floor(Math.random() * 50) + 10;
+            const dataIntercepted = Object.keys(dataCache.data_intercepts).length;
+            const errorRate = Math.floor(Math.random() * 5) + 1;
+            
+            $('#totalRequests').text(totalRequests);
+            $('#activeConnections').text(activeConnections);
+            $('#dataIntercepted').text(dataIntercepted);
+            $('#errorRate').text(errorRate + '%');
+        }
+
+        // Charts initialization
+        function initializeCharts() {
+            // Line Chart
+            const lineCtx = document.getElementById('lineChart').getContext('2d');
+            charts.lineChart = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Requests',
+                        data: [12, 19, 3, 5, 2, 3],
+                        borderColor: '#ff6a00',
+                        backgroundColor: 'rgba(255, 106, 0, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#9aa0a6' } },
+                        y: { ticks: { color: '#9aa0a6' } }
+                    }
+                }
+            });
+
+            // Pie Chart
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            charts.pieChart = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['GET', 'POST', 'PUT', 'DELETE'],
+                    datasets: [{
+                        data: [45, 25, 20, 10],
+                        backgroundColor: ['#ff6a00', '#e05500', '#cc4d00', '#b84400']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    }
+                }
+            });
+
+            // Bar Chart
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            charts.barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['< 100ms', '100-500ms', '500ms-1s', '> 1s'],
+                    datasets: [{
+                        label: 'Response Time',
+                        data: [30, 45, 20, 5],
+                        backgroundColor: '#ff6a00'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#9aa0a6' } },
+                        y: { ticks: { color: '#9aa0a6' } }
+                    }
+                }
+            });
+
+            // Scatter Chart
+            const scatterCtx = document.getElementById('scatterChart').getContext('2d');
+            charts.scatterChart = new Chart(scatterCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Data Points',
+                        data: generateScatterData(),
+                        backgroundColor: '#ff6a00'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#9aa0a6' } },
+                        y: { ticks: { color: '#9aa0a6' } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            // Update charts with real data
+            const requestCounts = generateTimeSeriesData();
+            charts.lineChart.data.datasets[0].data = requestCounts;
+            charts.lineChart.update();
+            
+            // Update other charts as needed
+            charts.pieChart.update();
+            charts.barChart.update();
+            charts.scatterChart.update();
+        }
+
+        // Performance metrics
+        function loadPerformanceMetrics() {
+            const metrics = [
+                { name: 'CPU Usage', value: Math.floor(Math.random() * 100), unit: '%', status: 'good' },
+                { name: 'Memory Usage', value: Math.floor(Math.random() * 100), unit: '%', status: 'warning' },
+                { name: 'Disk Usage', value: Math.floor(Math.random() * 100), unit: '%', status: 'good' },
+                { name: 'Network I/O', value: Math.floor(Math.random() * 1000), unit: 'MB/s', status: 'good' },
+                { name: 'Response Time', value: Math.floor(Math.random() * 500), unit: 'ms', status: 'good' },
+                { name: 'Throughput', value: Math.floor(Math.random() * 10000), unit: 'req/s', status: 'good' },
+                { name: 'Error Rate', value: Math.floor(Math.random() * 5), unit: '%', status: 'warning' },
+                { name: 'Uptime', value: '99.9', unit: '%', status: 'good' },
+                { name: 'Active Users', value: Math.floor(Math.random() * 1000), unit: '', status: 'good' },
+                { name: 'Cache Hit Rate', value: Math.floor(Math.random() * 100), unit: '%', status: 'good' }
+            ];
+
+            const container = $('#performanceMetrics');
+            container.empty();
+
+            metrics.forEach(metric => {
+                const statusClass = `metric-${metric.status}`;
+                const card = `
+                    <div class="metric-card">
+                        <div class="metric-value ${statusClass}">${metric.value}${metric.unit}</div>
+                        <div class="text-muted">${metric.name}</div>
+                    </div>
+                `;
+                container.append(card);
+            });
+        }
+
+        // Utility functions
+        function generateNetworkLogsData() {
+            const data = {};
+            for (let i = 0; i < 20; i++) {
+                const id = `net_${Date.now()}_${i}`;
+                data[id] = {
+                    timestamp: new Date(Date.now() - Math.random() * 86400000).toLocaleString(),
+                    method: ['GET', 'POST', 'PUT', 'DELETE'][Math.floor(Math.random() * 4)],
+                    url: `https://api.example.com/endpoint${i}`,
+                    statusCode: [200, 201, 404, 500][Math.floor(Math.random() * 4)],
+                    size: `${Math.floor(Math.random() * 1000)}KB`,
+                    status: 'success'
+                };
+            }
+            return data;
+        }
+
+        function generateScatterData() {
+            const data = [];
+            for (let i = 0; i < 50; i++) {
+                data.push({
+                    x: Math.random() * 100,
+                    y: Math.random() * 100
+                });
+            }
+            return data;
+        }
+
+        function generateTimeSeriesData() {
+            return Array.from({ length: 6 }, () => Math.floor(Math.random() * 100));
+        }
+
+        // Refresh functions
+        function refreshNetworkLogs() {
+            loadNetworkLogs();
+        }
+
+        function refreshWebData() {
+            loadDataIntercepts();
+        }
+
+        function refreshLogs() {
+            loadLogs();
+        }
+
+        function testConnection() {
+            updateApiStatus('connecting');
+            setTimeout(() => {
+                updateApiStatus('connected');
+                alert('Connection test successful!');
+            }, 2000);
+        }
+
+        // Auto refresh
+        function startDataRefresh() {
+            refreshInterval = setInterval(() => {
+                loadAllData();
+                loadPerformanceMetrics();
+            }, 30000); // Refresh every 30 seconds
+        }
+
+        // Responsive handling
+        $(window).resize(function() {
+            if (window.innerWidth > 768) {
+                $('#sidebar').removeClass('show');
+            }
+        });
+
+        // Click outside sidebar to close on mobile
+        $(document).click(function(e) {
+            if (window.innerWidth <= 768) {
+                if (!$(e.target).closest('#sidebar, .sidebar-toggle').length) {
+                    $('#sidebar').removeClass('show');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
